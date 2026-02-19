@@ -31,6 +31,27 @@ impl Default for Field {
     }
 }
 
+#[derive(PartialEq, Clone, Copy)]
+pub struct Position {
+    x: usize,
+    y: usize,
+}
+
+impl Into<Position> for (usize, usize) {
+    fn into(self) -> Position {
+        Position {
+            x: self.0,
+            y: self.1,
+        }
+    }
+}
+
+impl Display for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("({}, {})", self.x, self.y))
+    }
+}
+
 #[derive(PartialEq)]
 pub enum GameState {
     Ongoing,
@@ -72,29 +93,31 @@ impl Minesweeper {
         }
     }
 
-    fn move_bomb_somewhere_else(&mut self, x: usize, y: usize) {
-        let field = self.get_field_mut(x, y);
-        field.has_bomb = false;
-
+    fn move_bomb_somewhere_else(&mut self, initial: Position) {
         loop {
-            let ox = rand::random_range(0..self.width);
-            let oy = rand::random_range(0..self.height);
+            let pos = Position {
+                x: rand::random_range(0..self.width),
+                y: rand::random_range(0..self.height),
+            };
 
-            if ox == x && oy == y {
+            if pos == initial {
                 continue;
             }
 
-            let field = self.get_field_mut(ox, oy);
+            let field = self.get_field_mut(pos);
             if !field.has_bomb {
                 field.has_bomb = true;
                 break;
             }
         }
+
+        let field = self.get_field_mut(initial);
+        field.has_bomb = false;
     }
 
-    pub fn play(&mut self, x: usize, y: usize, flag: bool) -> GameState {
+    pub fn play(&mut self, pos: Position, flag: bool) -> GameState {
         if flag {
-            let field = self.get_field_mut(x, y);
+            let field = self.get_field_mut(pos);
             if field.state == FieldState::Flagged {
                 field.state = FieldState::Closed;
             } else {
@@ -104,14 +127,14 @@ impl Minesweeper {
             return GameState::Ongoing;
         }
 
-        let field = self.get_field(x, y);
+        let field = self.get_field(pos);
         if field.has_bomb && self.started {
-            self.move_bomb_somewhere_else(x, y);
+            self.move_bomb_somewhere_else(pos);
         }
 
         self.started = false;
 
-        let field = self.get_field_mut(x, y);
+        let field = self.get_field_mut(pos);
 
         if field.has_bomb {
             field.state = FieldState::Open;
@@ -119,70 +142,72 @@ impl Minesweeper {
         }
 
         let mut opener = Opener::new(self);
-        opener.open(x, y);
+        opener.open(pos);
 
         return GameState::Ongoing;
     }
 
-    pub fn neighbours(&self, x: usize, y: usize) -> Vec<(usize, usize)> {
+    pub fn neighbours(&self, pos: Position) -> Vec<Position> {
         let mut neigbhours = Vec::new();
 
+        let (x, y) = (pos.x, pos.y);
+
         if x > 0 && y > 0 {
-            neigbhours.push((x - 1, y - 1));
+            neigbhours.push((x - 1, y - 1).into());
         }
 
         if y > 0 {
-            neigbhours.push((x, y - 1));
+            neigbhours.push((x, y - 1).into());
         }
 
         if x < self.width - 1 && y > 0 {
-            neigbhours.push((x + 1, y - 1));
+            neigbhours.push((x + 1, y - 1).into());
         }
 
         if x > 0 {
-            neigbhours.push((x - 1, y));
+            neigbhours.push((x - 1, y).into());
         }
 
         if x < self.width - 1 {
-            neigbhours.push((x + 1, y));
+            neigbhours.push((x + 1, y).into());
         }
 
         if x > 0 && y < self.height - 1 {
-            neigbhours.push((x - 1, y + 1));
+            neigbhours.push((x - 1, y + 1).into());
         }
 
         if y < self.height - 1 {
-            neigbhours.push((x, y + 1));
+            neigbhours.push((x, y + 1).into());
         }
 
         if x < self.width - 1 && y < self.height - 1 {
-            neigbhours.push((x + 1, y + 1));
+            neigbhours.push((x + 1, y + 1).into());
         }
 
         neigbhours
     }
 
-    fn get_field(&self, x: usize, y: usize) -> &Field {
-        &self.map[y * self.width + x]
+    fn get_field(&self, pos: Position) -> &Field {
+        &self.map[pos.y * self.width + pos.x]
     }
 
-    fn get_field_mut(&mut self, x: usize, y: usize) -> &mut Field {
-        self.map.get_mut(y * self.width + x).unwrap()
+    fn get_field_mut(&mut self, pos: Position) -> &mut Field {
+        self.map.get_mut(pos.y * self.width + pos.x).unwrap()
     }
 
-    fn neighbouring_mines(&self, x: usize, y: usize) -> usize {
-        self.neighbours(x, y)
-            .iter()
-            .filter(|(nx, ny)| self.get_field(*nx, *ny).has_bomb)
+    fn neighbouring_mines(&self, pos: Position) -> usize {
+        self.neighbours(pos)
+            .into_iter()
+            .filter(|neighbour| self.get_field(*neighbour).has_bomb)
             .count()
     }
 
-    pub fn field_data(&self, x: usize, y: usize) -> FieldData {
-        let field = self.get_field(x, y);
+    pub fn field_data(&self, pos: Position) -> FieldData {
+        let field = self.get_field(pos);
         match field.state {
             FieldState::Closed => FieldData::Closed,
             FieldState::Flagged => FieldData::Flagged,
-            FieldState::Open => FieldData::Open(self.neighbouring_mines(x, y)),
+            FieldState::Open => FieldData::Open(self.neighbouring_mines(pos)),
         }
     }
 
@@ -209,7 +234,7 @@ impl Display for Minesweeper {
                         f.write_str(&"X".on_red().blink().to_string())?
                     }
                     FieldState::Open => {
-                        let mines = self.neighbouring_mines(x, y);
+                        let mines = self.neighbouring_mines((x, y).into());
                         let string = match mines {
                             0 => " ".black().into_styled(),
                             1 => "1".bright_blue().into_styled(),
@@ -243,20 +268,20 @@ impl<'a> Opener<'a> {
         Self { game, visited }
     }
 
-    fn open(&mut self, x: usize, y: usize) {
-        if self.visited[x + y * self.game.width] {
+    fn open(&mut self, pos: Position) {
+        if self.visited[pos.x + pos.y * self.game.width] {
             return;
         }
 
-        self.visited[x + y * self.game.width] = true;
-        self.game.get_field_mut(x, y).state = FieldState::Open;
+        self.visited[pos.x + pos.y * self.game.width] = true;
+        self.game.get_field_mut(pos).state = FieldState::Open;
 
-        if self.game.neighbouring_mines(x, y) > 0 {
+        if self.game.neighbouring_mines(pos) > 0 {
             return;
         }
 
-        for (nx, ny) in self.game.neighbours(x, y) {
-            self.open(nx, ny);
+        for neighbour in self.game.neighbours(pos) {
+            self.open(neighbour);
         }
     }
 }

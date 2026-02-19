@@ -10,8 +10,8 @@ fn main() {
 
     let mut game = Minesweeper::new(width, height, bombs);
 
-    while let Some((x, y, flag)) = pass(&game) {
-        match game.play(x, y, flag) {
+    while let Some((pos, flag)) = pass(&game) {
+        match game.play(pos, flag) {
             GameState::Ongoing => {}
             GameState::Won => {
                 println!("{}", game);
