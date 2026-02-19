@@ -30,6 +30,7 @@ pub enum GameState {
 }
 
 pub struct Minesweeper {
+    started: bool,
     width: usize,
     height: usize,
     map: Vec<Field>,
@@ -38,6 +39,10 @@ pub struct Minesweeper {
 impl Minesweeper {
     pub fn new(width: usize, height: usize, mut bombs: u32) -> Self {
         let size = width * height;
+
+        if bombs as usize >= size {
+            panic!("Need at least one free spot");
+        }
 
         let mut map = vec![Field::default(); size];
 
@@ -50,13 +55,37 @@ impl Minesweeper {
             }
         }
 
-        Self { width, height, map }
+        Self {
+            started: true,
+            width,
+            height,
+            map,
+        }
+    }
+
+    fn move_bomb_somewhere_else(&mut self, x: usize, y: usize) {
+        let field = self.get_field_mut(x, y);
+        field.has_bomb = false;
+
+        loop {
+            let ox = rand::random_range(0..self.width);
+            let oy = rand::random_range(0..self.height);
+
+            if ox == x && oy == y {
+                continue;
+            }
+
+            let field = self.get_field_mut(ox, oy);
+            if !field.has_bomb {
+                field.has_bomb = true;
+                break;
+            }
+        }
     }
 
     pub fn play(&mut self, x: usize, y: usize, flag: bool) -> GameState {
-        let field = self.get_field_mut(x, y);
-
         if flag {
+            let field = self.get_field_mut(x, y);
             if field.state == FieldState::Flagged {
                 field.state = FieldState::Closed;
             } else {
@@ -65,6 +94,15 @@ impl Minesweeper {
 
             return GameState::Ongoing;
         }
+
+        let field = self.get_field(x, y);
+        if field.has_bomb && self.started {
+            self.move_bomb_somewhere_else(x, y);
+        }
+
+        self.started = false;
+
+        let field = self.get_field_mut(x, y);
 
         if field.has_bomb {
             field.state = FieldState::Open;
