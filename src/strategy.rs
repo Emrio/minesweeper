@@ -1,28 +1,30 @@
-use crate::{FieldData, Minesweeper, Position};
+use crate::{CellData, MineField, Position};
 
-pub fn pass(game: &Minesweeper) -> Option<(Position, bool)> {
+pub fn pass(game: &MineField) -> Option<(Position, bool)> {
     immediate_move(game).or_else(|| random_move(game))
 }
 
-fn immediate_move(game: &Minesweeper) -> Option<(Position, bool)> {
+/// when a cell's neighbouring mines are all flagged, open all remaining closed neighbours
+/// when a cell's closed neighbourhood size is equal to its mine own count, all these neighbours are bombs, flag them
+fn immediate_move(game: &MineField) -> Option<(Position, bool)> {
     for y in 0..game.height() {
         for x in 0..game.height() {
             let pos = (x, y).into();
 
-            match game.field_data(pos) {
-                FieldData::Flagged | FieldData::Closed => {}
-                FieldData::Open(mines_around) => {
+            match game.cell_data(pos) {
+                CellData::Flagged | CellData::Closed => {}
+                CellData::Open(mines_around) => {
                     let neighbours = game.neighbours(pos);
-                    let mut neighbours: (Vec<(Position, FieldData)>, Vec<(Position, FieldData)>) =
+                    let mut neighbours: (Vec<(Position, CellData)>, Vec<(Position, CellData)>) =
                         neighbours
                             .into_iter()
-                            .map(|neighbour| (neighbour, game.field_data(neighbour)))
-                            .filter(|(_, field)| match field {
-                                FieldData::Closed | FieldData::Flagged => true,
-                                FieldData::Open(_) => false,
+                            .map(|neighbour| (neighbour, game.cell_data(neighbour)))
+                            .filter(|(_, cell)| match cell {
+                                CellData::Closed | CellData::Flagged => true,
+                                CellData::Open(_) => false,
                             })
-                            .partition(|(_, field)| {
-                                if let FieldData::Closed = field {
+                            .partition(|(_, cell)| {
+                                if let CellData::Closed = cell {
                                     true
                                 } else {
                                     false
@@ -56,15 +58,16 @@ fn immediate_move(game: &Minesweeper) -> Option<(Position, bool)> {
     return None;
 }
 
-fn random_move(game: &Minesweeper) -> Option<(Position, bool)> {
+/// choose a random closed cell and open it
+fn random_move(game: &MineField) -> Option<(Position, bool)> {
     let mut closed_positions = Vec::new();
 
     for y in 0..game.height() {
         for x in 0..game.height() {
             let pos = (x, y).into();
 
-            match game.field_data(pos) {
-                FieldData::Closed => {
+            match game.cell_data(pos) {
+                CellData::Closed => {
                     closed_positions.push(pos);
                 }
                 _ => {}

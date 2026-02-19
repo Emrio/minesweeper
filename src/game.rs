@@ -3,30 +3,30 @@ use std::fmt::Display;
 use color_eyre::owo_colors::OwoColorize;
 
 #[derive(Clone, PartialEq)]
-enum FieldState {
+enum CellState {
     Closed,
     Open,
     Flagged,
 }
 
 #[derive(PartialEq)]
-pub enum FieldData {
+pub enum CellData {
     Closed,
     Open(usize),
     Flagged,
 }
 
 #[derive(Clone)]
-struct Field {
-    has_bomb: bool,
-    state: FieldState,
+struct Cell {
+    has_mine: bool,
+    state: CellState,
 }
 
-impl Default for Field {
+impl Default for Cell {
     fn default() -> Self {
         Self {
-            has_bomb: false,
-            state: FieldState::Closed,
+            has_mine: false,
+            state: CellState::Closed,
         }
     }
 }
@@ -59,29 +59,29 @@ pub enum GameState {
     Lost,
 }
 
-pub struct Minesweeper {
+pub struct MineField {
     started: bool,
     width: usize,
     height: usize,
-    map: Vec<Field>,
+    field: Vec<Cell>,
 }
 
-impl Minesweeper {
-    pub fn new(width: usize, height: usize, mut bombs: u32) -> Self {
+impl MineField {
+    pub fn new(width: usize, height: usize, mut mines: u32) -> Self {
         let size = width * height;
 
-        if bombs as usize >= size {
+        if mines as usize >= size {
             panic!("Need at least one free spot");
         }
 
-        let mut map = vec![Field::default(); size];
+        let mut field = vec![Cell::default(); size];
 
-        while bombs > 0 {
+        while mines > 0 {
             let i = rand::random_range(0..size);
 
-            if !map[i].has_bomb {
-                map[i].has_bomb = true;
-                bombs -= 1;
+            if !field[i].has_mine {
+                field[i].has_mine = true;
+                mines -= 1;
             }
         }
 
@@ -89,11 +89,11 @@ impl Minesweeper {
             started: true,
             width,
             height,
-            map,
+            field,
         }
     }
 
-    fn move_bomb_somewhere_else(&mut self, initial: Position) {
+    fn move_mine_somewhere_else(&mut self, initial: Position) {
         loop {
             let pos = Position {
                 x: rand::random_range(0..self.width),
@@ -104,40 +104,40 @@ impl Minesweeper {
                 continue;
             }
 
-            let field = self.get_field_mut(pos);
-            if !field.has_bomb {
-                field.has_bomb = true;
+            let cell = self.get_cell_mut(pos);
+            if !cell.has_mine {
+                cell.has_mine = true;
                 break;
             }
         }
 
-        let field = self.get_field_mut(initial);
-        field.has_bomb = false;
+        let cell = self.get_cell_mut(initial);
+        cell.has_mine = false;
     }
 
     pub fn play(&mut self, pos: Position, flag: bool) -> GameState {
         if flag {
-            let field = self.get_field_mut(pos);
-            if field.state == FieldState::Flagged {
-                field.state = FieldState::Closed;
+            let cell = self.get_cell_mut(pos);
+            if cell.state == CellState::Flagged {
+                cell.state = CellState::Closed;
             } else {
-                field.state = FieldState::Flagged;
+                cell.state = CellState::Flagged;
             }
 
             return GameState::Ongoing;
         }
 
-        let field = self.get_field(pos);
-        if field.has_bomb && self.started {
-            self.move_bomb_somewhere_else(pos);
+        let cell = self.get_cell(pos);
+        if cell.has_mine && self.started {
+            self.move_mine_somewhere_else(pos);
         }
 
         self.started = false;
 
-        let field = self.get_field_mut(pos);
+        let cell = self.get_cell_mut(pos);
 
-        if field.has_bomb {
-            field.state = FieldState::Open;
+        if cell.has_mine {
+            cell.state = CellState::Open;
             return GameState::Lost;
         }
 
@@ -187,27 +187,27 @@ impl Minesweeper {
         neigbhours
     }
 
-    fn get_field(&self, pos: Position) -> &Field {
-        &self.map[pos.y * self.width + pos.x]
+    fn get_cell(&self, pos: Position) -> &Cell {
+        &self.field[pos.y * self.width + pos.x]
     }
 
-    fn get_field_mut(&mut self, pos: Position) -> &mut Field {
-        self.map.get_mut(pos.y * self.width + pos.x).unwrap()
+    fn get_cell_mut(&mut self, pos: Position) -> &mut Cell {
+        self.field.get_mut(pos.y * self.width + pos.x).unwrap()
     }
 
     fn neighbouring_mines(&self, pos: Position) -> usize {
         self.neighbours(pos)
             .into_iter()
-            .filter(|neighbour| self.get_field(*neighbour).has_bomb)
+            .filter(|neighbour| self.get_cell(*neighbour).has_mine)
             .count()
     }
 
-    pub fn field_data(&self, pos: Position) -> FieldData {
-        let field = self.get_field(pos);
-        match field.state {
-            FieldState::Closed => FieldData::Closed,
-            FieldState::Flagged => FieldData::Flagged,
-            FieldState::Open => FieldData::Open(self.neighbouring_mines(pos)),
+    pub fn cell_data(&self, pos: Position) -> CellData {
+        let cell = self.get_cell(pos);
+        match cell.state {
+            CellState::Closed => CellData::Closed,
+            CellState::Flagged => CellData::Flagged,
+            CellState::Open => CellData::Open(self.neighbouring_mines(pos)),
         }
     }
 
@@ -220,20 +220,20 @@ impl Minesweeper {
     }
 }
 
-impl Display for Minesweeper {
+impl Display for MineField {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&"—".repeat(self.width))?;
 
-        for (y, row) in self.map.chunks(self.width).enumerate() {
+        for (y, row) in self.field.chunks(self.width).enumerate() {
             f.write_str("\n")?;
-            for (x, field) in row.iter().enumerate() {
-                match field.state {
-                    FieldState::Closed => f.write_str("o")?,
-                    FieldState::Flagged => f.write_str(&"F".black().to_string())?,
-                    FieldState::Open if field.has_bomb => {
+            for (x, cell) in row.iter().enumerate() {
+                match cell.state {
+                    CellState::Closed => f.write_str("o")?,
+                    CellState::Flagged => f.write_str(&"F".black().to_string())?,
+                    CellState::Open if cell.has_mine => {
                         f.write_str(&"X".on_red().blink().to_string())?
                     }
-                    FieldState::Open => {
+                    CellState::Open => {
                         let mines = self.neighbouring_mines((x, y).into());
                         let string = match mines {
                             0 => " ".black().into_styled(),
@@ -258,13 +258,13 @@ impl Display for Minesweeper {
 }
 
 struct Opener<'a> {
-    game: &'a mut Minesweeper,
+    game: &'a mut MineField,
     visited: Vec<bool>,
 }
 
 impl<'a> Opener<'a> {
-    fn new(game: &'a mut Minesweeper) -> Self {
-        let visited = vec![false; game.map.len()];
+    fn new(game: &'a mut MineField) -> Self {
+        let visited = vec![false; game.field.len()];
         Self { game, visited }
     }
 
@@ -274,7 +274,7 @@ impl<'a> Opener<'a> {
         }
 
         self.visited[pos.x + pos.y * self.game.width] = true;
-        self.game.get_field_mut(pos).state = FieldState::Open;
+        self.game.get_cell_mut(pos).state = CellState::Open;
 
         if self.game.neighbouring_mines(pos) > 0 {
             return;

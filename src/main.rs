@@ -1,14 +1,14 @@
-use minesweeper::{GameState, Minesweeper, pass};
+use minesweeper::{GameState, MineField, pass};
 
 fn main() {
     println!("Hello, world!");
 
-    let width = 12;
-    let height = 12;
-    let bomb_rate = 0.2;
-    let bombs = (bomb_rate * ((width * height) as f64)) as u32;
+    let width = 50;
+    let height = 50;
+    let mine_rate = 0.12;
+    let mines = (mine_rate * ((width * height) as f64)) as u32;
 
-    let mut game = Minesweeper::new(width, height, bombs);
+    let mut game = MineField::new(width, height, mines);
 
     while let Some((pos, flag)) = pass(&game) {
         match game.play(pos, flag) {
