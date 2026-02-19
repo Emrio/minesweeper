@@ -1,18 +1,29 @@
-use minesweeper::{GameState, Minesweeper};
+use minesweeper::{GameState, Minesweeper, pass};
 
 fn main() {
     println!("Hello, world!");
 
-    let mut game = Minesweeper::new(212, 212, 5_000);
+    let width = 12;
+    let height = 12;
+    let bomb_rate = 0.2;
+    let bombs = (bomb_rate * ((width * height) as f64)) as u32;
 
-    loop {
-        let x = rand::random_range(0..212);
-        let y = rand::random_range(0..212);
+    let mut game = Minesweeper::new(width, height, bombs);
 
-        if game.play(x, y, false) == GameState::Lost {
-            break;
-        }
+    while let Some((x, y, flag)) = pass(&game) {
+        match game.play(x, y, flag) {
+            GameState::Ongoing => {}
+            GameState::Won => {
+                println!("{}", game);
+                println!("WON!");
+                return;
+            }
+            GameState::Lost => {
+                println!("{}", game);
+                println!("LOST!");
+                return;
+            }
+        };
         println!("{}", game);
     }
-    println!("{}", game);
 }

@@ -1,9 +1,18 @@
 use std::fmt::Display;
 
+use color_eyre::owo_colors::OwoColorize;
+
 #[derive(Clone, PartialEq)]
 enum FieldState {
     Closed,
     Open,
+    Flagged,
+}
+
+#[derive(PartialEq)]
+pub enum FieldData {
+    Closed,
+    Open(usize),
     Flagged,
 }
 
@@ -115,7 +124,7 @@ impl Minesweeper {
         return GameState::Ongoing;
     }
 
-    fn neighbours(&self, x: usize, y: usize) -> Vec<(usize, usize)> {
+    pub fn neighbours(&self, x: usize, y: usize) -> Vec<(usize, usize)> {
         let mut neigbhours = Vec::new();
 
         if x > 0 && y > 0 {
@@ -166,6 +175,23 @@ impl Minesweeper {
             .iter()
             .filter(|(nx, ny)| self.get_field(*nx, *ny).has_bomb)
             .count()
+    }
+
+    pub fn field_data(&self, x: usize, y: usize) -> FieldData {
+        let field = self.get_field(x, y);
+        match field.state {
+            FieldState::Closed => FieldData::Closed,
+            FieldState::Flagged => FieldData::Flagged,
+            FieldState::Open => FieldData::Open(self.neighbouring_mines(x, y)),
+        }
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.height
     }
 }
 
