@@ -178,29 +178,27 @@ impl Display for Minesweeper {
             for (x, field) in row.iter().enumerate() {
                 match field.state {
                     FieldState::Closed => f.write_str("o")?,
-                    FieldState::Flagged => f.write_str("F")?,
-                    FieldState::Open if field.has_bomb => f.write_str("X")?,
+                    FieldState::Flagged => f.write_str(&"F".black().to_string())?,
+                    FieldState::Open if field.has_bomb => {
+                        f.write_str(&"X".on_red().blink().to_string())?
+                    }
                     FieldState::Open => {
                         let mines = self.neighbouring_mines(x, y);
-                        if mines == 0 {
-                            f.write_str(" ")?;
-                        } else {
-                            f.write_str(&mines.to_string())?;
-                        }
+                        let string = match mines {
+                            0 => " ".black().into_styled(),
+                            1 => "1".bright_blue().into_styled(),
+                            2 => "2".green().into_styled(),
+                            3 => "3".red().into_styled(),
+                            4 => "4".blue().into_styled(),
+                            5 => "5".yellow().into_styled(),
+                            6 => "6".cyan().into_styled(),
+                            7 => "7".black().into_styled(),
+                            8 => "8".bright_black().into_styled(),
+                            _ => unreachable!("Invalid value of mines"),
+                        };
+                        f.write_str(&string.to_string())?;
                     }
                 };
-
-                // if field.has_bomb {
-                //     f.write_str("X")?;
-                // } else {
-                //     let mines = self.neighbouring_mines(x, y);
-
-                // if mines == 0 {
-                //     f.write_str(" ")?;
-                // } else {
-                //     f.write_str(&mines.to_string())?;
-                // }
-                // }
             }
         }
 
