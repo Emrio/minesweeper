@@ -1,17 +1,16 @@
 use crate::{FieldData, Minesweeper, Position};
 
 pub fn pass(game: &Minesweeper) -> Option<(Position, bool)> {
-    let mut closed_positions = Vec::new();
+    immediate_move(game).or_else(|| random_move(game))
+}
 
+fn immediate_move(game: &Minesweeper) -> Option<(Position, bool)> {
     for y in 0..game.height() {
         for x in 0..game.height() {
             let pos = (x, y).into();
 
             match game.field_data(pos) {
-                FieldData::Flagged => {}
-                FieldData::Closed => {
-                    closed_positions.push(pos);
-                }
+                FieldData::Flagged | FieldData::Closed => {}
                 FieldData::Open(mines_around) => {
                     let neighbours = game.neighbours(pos);
                     let mut neighbours: (Vec<(Position, FieldData)>, Vec<(Position, FieldData)>) =
@@ -50,6 +49,25 @@ pub fn pass(game: &Minesweeper) -> Option<(Position, bool)> {
                     }
                     return Some((neighbour, mines_left > 0));
                 }
+            }
+        }
+    }
+
+    return None;
+}
+
+fn random_move(game: &Minesweeper) -> Option<(Position, bool)> {
+    let mut closed_positions = Vec::new();
+
+    for y in 0..game.height() {
+        for x in 0..game.height() {
+            let pos = (x, y).into();
+
+            match game.field_data(pos) {
+                FieldData::Closed => {
+                    closed_positions.push(pos);
+                }
+                _ => {}
             }
         }
     }
