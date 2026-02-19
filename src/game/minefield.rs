@@ -2,62 +2,11 @@ use std::fmt::Display;
 
 use color_eyre::owo_colors::OwoColorize;
 
-#[derive(Clone, PartialEq)]
-enum CellState {
-    Closed,
-    Open,
-    Flagged,
-}
-
-#[derive(PartialEq)]
-pub enum CellData {
-    Closed,
-    Open(usize),
-    Flagged,
-}
-
-#[derive(Clone)]
-struct Cell {
-    has_mine: bool,
-    state: CellState,
-}
-
-impl Default for Cell {
-    fn default() -> Self {
-        Self {
-            has_mine: false,
-            state: CellState::Closed,
-        }
-    }
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct Position {
-    x: usize,
-    y: usize,
-}
-
-impl Into<Position> for (usize, usize) {
-    fn into(self) -> Position {
-        Position {
-            x: self.0,
-            y: self.1,
-        }
-    }
-}
-
-impl Display for Position {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("({}, {})", self.x, self.y))
-    }
-}
-
-#[derive(PartialEq)]
-pub enum GameState {
-    Ongoing,
-    Won,
-    Lost,
-}
+use crate::game::{
+    GameState,
+    cell::{Cell, CellData, CellState},
+    position::Position,
+};
 
 pub struct MineField {
     started: bool,
@@ -95,10 +44,7 @@ impl MineField {
 
     fn move_mine_somewhere_else(&mut self, initial: Position) {
         loop {
-            let pos = Position {
-                x: rand::random_range(0..self.width),
-                y: rand::random_range(0..self.height),
-            };
+            let pos = Position::random(self.width, self.height);
 
             if pos == initial {
                 continue;
@@ -147,56 +93,16 @@ impl MineField {
         return GameState::Ongoing;
     }
 
-    pub fn neighbours(&self, pos: Position) -> Vec<Position> {
-        let mut neigbhours = Vec::new();
-
-        let (x, y) = (pos.x, pos.y);
-
-        if x > 0 && y > 0 {
-            neigbhours.push((x - 1, y - 1).into());
-        }
-
-        if y > 0 {
-            neigbhours.push((x, y - 1).into());
-        }
-
-        if x < self.width - 1 && y > 0 {
-            neigbhours.push((x + 1, y - 1).into());
-        }
-
-        if x > 0 {
-            neigbhours.push((x - 1, y).into());
-        }
-
-        if x < self.width - 1 {
-            neigbhours.push((x + 1, y).into());
-        }
-
-        if x > 0 && y < self.height - 1 {
-            neigbhours.push((x - 1, y + 1).into());
-        }
-
-        if y < self.height - 1 {
-            neigbhours.push((x, y + 1).into());
-        }
-
-        if x < self.width - 1 && y < self.height - 1 {
-            neigbhours.push((x + 1, y + 1).into());
-        }
-
-        neigbhours
-    }
-
     fn get_cell(&self, pos: Position) -> &Cell {
-        &self.field[pos.y * self.width + pos.x]
+        &self.field[pos.to_index(self.width)]
     }
 
     fn get_cell_mut(&mut self, pos: Position) -> &mut Cell {
-        self.field.get_mut(pos.y * self.width + pos.x).unwrap()
+        self.field.get_mut(pos.to_index(self.width)).unwrap()
     }
 
     fn neighbouring_mines(&self, pos: Position) -> usize {
-        self.neighbours(pos)
+        pos.neighbours(self)
             .into_iter()
             .filter(|neighbour| self.get_cell(*neighbour).has_mine)
             .count()
@@ -269,18 +175,18 @@ impl<'a> Opener<'a> {
     }
 
     fn open(&mut self, pos: Position) {
-        if self.visited[pos.x + pos.y * self.game.width] {
+        if self.visited[pos.to_index(self.game.width)] {
             return;
         }
 
-        self.visited[pos.x + pos.y * self.game.width] = true;
+        self.visited[pos.to_index(self.game.width)] = true;
         self.game.get_cell_mut(pos).state = CellState::Open;
 
         if self.game.neighbouring_mines(pos) > 0 {
             return;
         }
 
-        for neighbour in self.game.neighbours(pos) {
+        for neighbour in pos.neighbours(self.game) {
             self.open(neighbour);
         }
     }

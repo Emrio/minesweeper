@@ -14,7 +14,7 @@ fn immediate_move(game: &MineField) -> Option<(Position, bool)> {
             match game.cell_data(pos) {
                 CellData::Flagged | CellData::Closed => {}
                 CellData::Open(mines_around) => {
-                    let neighbours = game.neighbours(pos);
+                    let neighbours = pos.neighbours(game);
                     let mut neighbours: (Vec<(Position, CellData)>, Vec<(Position, CellData)>) =
                         neighbours
                             .into_iter()
@@ -55,7 +55,7 @@ fn immediate_move(game: &MineField) -> Option<(Position, bool)> {
         }
     }
 
-    return None;
+    None
 }
 
 /// choose a random closed cell and open it
@@ -86,5 +86,5 @@ fn random_move(game: &MineField) -> Option<(Position, bool)> {
     };
 
     println!("Opening randomly {pos}");
-    return Some((*pos, false));
+    Some((*pos, false))
 }
