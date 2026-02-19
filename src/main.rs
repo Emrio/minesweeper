@@ -1,4 +1,4 @@
-use minesweeper::{GameState, MineField, pass};
+use minesweeper::{GameState, MineField, find_next_move};
 
 fn main() {
     println!("Hello, world!");
@@ -10,7 +10,7 @@ fn main() {
 
     let mut game = MineField::new(width, height, mines);
 
-    while let Some((pos, flag)) = pass(&game) {
+    while let Some((pos, flag)) = find_next_move(&game) {
         match game.play(pos, flag) {
             GameState::Ongoing => {}
             GameState::Won => {

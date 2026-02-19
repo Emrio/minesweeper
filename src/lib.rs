@@ -1,5 +1,5 @@
 mod game;
-mod strategy;
+mod solver;
 
 pub use game::*;
-pub use strategy::*;
+pub use solver::*;
