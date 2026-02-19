@@ -4,3 +4,5 @@
 - [x] Basic strategy based on neighbouring cells state
 - [ ] More advanced deterministic strategies
 - [ ] Probabilistic strategies when deterministic ones are not possible
+
+![Minesweeper experiment](./example-game.png)
