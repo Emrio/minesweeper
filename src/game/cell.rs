@@ -35,6 +35,14 @@ impl CellData {
             None
         }
     }
+
+    pub fn is_closed(self) -> bool {
+        if let CellData::Closed = self {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 pub enum CellConfig {

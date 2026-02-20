@@ -1,3 +1,5 @@
+use rand::seq::IndexedRandom;
+
 use crate::{CellData, MineField, Position};
 
 /// choose a random closed cell and open it
@@ -17,16 +19,47 @@ pub(super) fn choose_random_move(game: &MineField) -> Option<(Position, bool)> {
         }
     }
 
-    if closed_positions.is_empty() {
-        return None;
-    }
-
-    let i = rand::random_range(0..closed_positions.len());
-    let Some(pos) = closed_positions.get(i) else {
+    let Some(pos) = closed_positions.choose(&mut rand::rng()) else {
         println!("Could not find move to make!");
         return None;
     };
 
     println!("Opening randomly {pos}");
     Some((*pos, false))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{CellConfig, MineField};
+
+    #[test]
+    fn test_random_move_with_closed_cells() {
+        let game = MineField::from([
+            [CellConfig::Mine, CellConfig::Closed, CellConfig::Closed],
+            [CellConfig::Open, CellConfig::Open, CellConfig::Mine],
+            [CellConfig::Closed, CellConfig::Open, CellConfig::Closed],
+        ]);
+
+        let next_move = choose_random_move(&game);
+
+        match next_move {
+            None => panic!("Random move should find a move when there are closed cells"),
+            Some((pos, false)) if game.cell_data(pos).is_closed() => {}
+            _ => panic!("Invalid move"),
+        }
+    }
+
+    #[test]
+    fn test_random_move_without_closed_cells() {
+        let game = MineField::from([
+            [CellConfig::Flagged, CellConfig::Flagged, CellConfig::Open],
+            [CellConfig::Open, CellConfig::Open, CellConfig::Flagged],
+            [CellConfig::Open, CellConfig::Open, CellConfig::Open],
+        ]);
+
+        let next_move = choose_random_move(&game);
+
+        assert_eq!(next_move, None)
+    }
 }
