@@ -9,6 +9,6 @@ pub enum GameState {
     Lost,
 }
 
-pub use cell::CellData;
+pub use cell::{CellConfig, CellData};
 pub use minefield::MineField;
 pub use position::Position;

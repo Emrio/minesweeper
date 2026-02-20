@@ -2,10 +2,13 @@ use std::fmt::Display;
 
 use color_eyre::owo_colors::OwoColorize;
 
-use crate::game::{
-    GameState,
-    cell::{Cell, CellData, CellState},
-    position::Position,
+use crate::{
+    CellConfig,
+    game::{
+        GameState,
+        cell::{Cell, CellData, CellState},
+        position::Position,
+    },
 };
 
 pub struct MineField {
@@ -38,6 +41,34 @@ impl MineField {
             started: true,
             width,
             height,
+            field,
+        }
+    }
+
+    pub fn from<const W: usize, const H: usize>(field: [[CellConfig; W]; H]) -> Self {
+        let field = field
+            .into_iter()
+            .flatten()
+            .map(|config| match config {
+                CellConfig::Closed => Cell {
+                    has_mine: false,
+                    state: CellState::Closed,
+                },
+                CellConfig::Open => Cell {
+                    has_mine: false,
+                    state: CellState::Open,
+                },
+                CellConfig::Mine => Cell {
+                    has_mine: true,
+                    state: CellState::Closed,
+                },
+            })
+            .collect();
+
+        Self {
+            started: true,
+            width: W,
+            height: H,
             field,
         }
     }

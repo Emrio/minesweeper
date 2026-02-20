@@ -26,3 +26,9 @@ pub enum CellData {
     Open(usize),
     Flagged,
 }
+
+pub enum CellConfig {
+    Closed,
+    Open,
+    Mine,
+}
