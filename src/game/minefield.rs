@@ -62,6 +62,10 @@ impl MineField {
                     has_mine: true,
                     state: CellState::Closed,
                 },
+                CellConfig::Flagged => Cell {
+                    has_mine: true,
+                    state: CellState::Flagged,
+                },
             })
             .collect();
 

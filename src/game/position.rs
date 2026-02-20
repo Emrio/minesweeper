@@ -22,14 +22,15 @@ impl Debug for Position {
 
 impl Into<Position> for (usize, usize) {
     fn into(self) -> Position {
-        Position {
-            x: self.0,
-            y: self.1,
-        }
+        Position::from(self.0, self.1)
     }
 }
 
 impl Position {
+    pub fn from(x: usize, y: usize) -> Self {
+        Self { x, y }
+    }
+
     pub(super) fn random(width: usize, height: usize) -> Self {
         Self {
             x: rand::random_range(0..width),

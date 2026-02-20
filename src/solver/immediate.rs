@@ -53,3 +53,30 @@ pub(super) fn find_immediate_move(game: &MineField) -> Option<(Position, bool)> 
 
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{CellConfig, MineField};
+
+    #[test]
+    fn test_immediate_move_1bo() {
+        let game = MineField::from([[CellConfig::Open, CellConfig::Mine, CellConfig::Open]]);
+
+        let next_move = find_immediate_move(&game);
+
+        assert_eq!(next_move, Some((Position::from(1, 0), true)));
+    }
+
+    #[test]
+    fn test_immediate_move_use_flags() {
+        let game = MineField::from([
+            [CellConfig::Open, CellConfig::Mine, CellConfig::Closed],
+            [CellConfig::Open, CellConfig::Flagged, CellConfig::Closed],
+        ]);
+
+        let next_move = find_immediate_move(&game);
+
+        assert_eq!(next_move, Some((Position::from(1, 0), true)));
+    }
+}

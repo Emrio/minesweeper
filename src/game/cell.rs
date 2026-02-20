@@ -41,4 +41,5 @@ pub enum CellConfig {
     Closed,
     Open,
     Mine,
+    Flagged,
 }
