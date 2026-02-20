@@ -24,6 +24,6 @@ fn main() {
                 return;
             }
         };
-        println!("{}", game);
     }
+    // println!("{}", game);
 }
