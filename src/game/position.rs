@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
 use crate::MineField;
 
@@ -11,6 +11,12 @@ pub struct Position {
 impl Display for Position {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("({}, {})", self.x, self.y))
+    }
+}
+
+impl Debug for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(&self, f)
     }
 }
 
@@ -31,7 +37,7 @@ impl Position {
         }
     }
 
-    pub(super) fn to_index(self, width: usize) -> usize {
+    pub fn to_index(self, width: usize) -> usize {
         self.x + self.y * width
     }
 

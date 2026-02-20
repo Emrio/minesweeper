@@ -27,6 +27,16 @@ pub enum CellData {
     Flagged,
 }
 
+impl CellData {
+    pub fn get_mines_count(&self) -> Option<usize> {
+        if let CellData::Open(mines) = self {
+            Some(*mines)
+        } else {
+            None
+        }
+    }
+}
+
 pub enum CellConfig {
     Closed,
     Open,
