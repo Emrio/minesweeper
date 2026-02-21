@@ -1,8 +1,8 @@
 mod cluster;
 mod shadow;
 
-use crate::{CellData, MineField, Position};
-use cluster::{ClusterCell, Clusterer};
+use crate::{CellData, MineField, Position, solver::invariant::cluster::Cluster};
+use cluster::ClusterCell;
 use shadow::ShadowMinefield;
 
 fn generate_suitable_cluster_solutions(
@@ -84,25 +84,21 @@ fn build_cluster_and_find_move(
 ) -> Option<(Position, bool)> {
     // println!("Initial");
     // println!("{shadow_minefield}");
-    let mut clusterer = Clusterer::from(&shadow_minefield);
-    let mut cluster = clusterer.build_cluster(initial_pos);
+    let mut cluster = Cluster::from(shadow_minefield, initial_pos);
 
-    let open_positions: Vec<Position> = cluster
-        .to_vec()
-        .into_iter()
-        .flat_map(|cell| cell.open_neighbours)
-        .collect();
-
-    if cluster.is_empty() {
+    if cluster.closed_positions.is_empty() {
         return None;
     }
 
-    let valid_solutions =
-        generate_suitable_cluster_solutions(shadow_minefield, &open_positions, &mut cluster);
-    println!("Cluster: {:?}", cluster);
+    let valid_solutions = generate_suitable_cluster_solutions(
+        cluster.shadow_minefield,
+        &cluster.open_positions,
+        &mut cluster.closed_positions,
+    );
+    println!("Cluster: {}", cluster);
     println!("Valid solutions: {valid_solutions:?}");
 
-    find_invariant_solution(cluster, valid_solutions)
+    find_invariant_solution(cluster.closed_positions, valid_solutions)
 }
 
 pub(super) fn find_invariant_move(game: &MineField) -> Option<(Position, bool)> {

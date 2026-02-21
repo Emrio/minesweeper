@@ -58,9 +58,38 @@ impl ShadowCell {
     }
 }
 
+impl Display for ShadowCell {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ShadowCell::Closed => f.write_str("o"),
+            ShadowCell::Flagged => f.write_str(&"F".black().to_string()),
+            ShadowCell::ShadowFlagged => f.write_str("F"),
+            ShadowCell::Open {
+                mines: _,
+                mines_left,
+            } => {
+                let string = match mines_left {
+                    0 => " ".black().into_styled(),
+                    1 => "1".bright_blue().into_styled(),
+                    2 => "2".green().into_styled(),
+                    3 => "3".red().into_styled(),
+                    4 => "4".blue().into_styled(),
+                    5 => "5".yellow().into_styled(),
+                    6 => "6".cyan().into_styled(),
+                    7 => "7".black().into_styled(),
+                    8 => "8".bright_black().into_styled(),
+                    _ => unreachable!("Invalid value of mines left"),
+                };
+                f.write_str(&string.to_string())
+            }
+            ShadowCell::ShadowOpen => f.write_str("+"),
+        }
+    }
+}
+
 pub(super) struct ShadowMinefield<'a> {
     pub(super) game: &'a MineField,
-    field: Vec<ShadowCell>,
+    pub(super) field: Vec<ShadowCell>,
 }
 
 impl<'a> ShadowMinefield<'a> {
@@ -206,30 +235,7 @@ impl<'a> Display for ShadowMinefield<'a> {
         for row in self.field.chunks(self.game.width()) {
             f.write_str("\n")?;
             for cell in row.iter() {
-                match cell {
-                    ShadowCell::Closed => f.write_str("o")?,
-                    ShadowCell::Flagged => f.write_str(&"F".black().to_string())?,
-                    ShadowCell::ShadowFlagged => f.write_str("F")?,
-                    ShadowCell::Open {
-                        mines: _,
-                        mines_left,
-                    } => {
-                        let string = match mines_left {
-                            0 => " ".black().into_styled(),
-                            1 => "1".bright_blue().into_styled(),
-                            2 => "2".green().into_styled(),
-                            3 => "3".red().into_styled(),
-                            4 => "4".blue().into_styled(),
-                            5 => "5".yellow().into_styled(),
-                            6 => "6".cyan().into_styled(),
-                            7 => "7".black().into_styled(),
-                            8 => "8".bright_black().into_styled(),
-                            _ => unreachable!("Invalid value of mines left"),
-                        };
-                        f.write_str(&string.to_string())?;
-                    }
-                    ShadowCell::ShadowOpen => f.write_str("+")?,
-                }
+                cell.fmt(f)?
             }
         }
 
