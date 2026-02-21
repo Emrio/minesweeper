@@ -1,3 +1,7 @@
+use std::fmt::Display;
+
+use color_eyre::owo_colors::OwoColorize;
+
 use crate::{CellData, MineField, Position};
 
 #[derive(Debug)]
@@ -194,10 +198,50 @@ impl<'a> ShadowMinefield<'a> {
     }
 }
 
+impl<'a> Display for ShadowMinefield<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&"—".repeat(self.game.width()))?;
+
+        for row in self.field.chunks(self.game.width()) {
+            f.write_str("\n")?;
+            for cell in row.iter() {
+                match cell {
+                    ShadowCell::Closed => f.write_str("o")?,
+                    ShadowCell::Flagged => f.write_str(&"F".black().to_string())?,
+                    ShadowCell::ShadowFlagged => f.write_str("F")?,
+                    ShadowCell::Open {
+                        mines: _,
+                        mines_left,
+                    } => {
+                        let string = match mines_left {
+                            0 => " ".black().into_styled(),
+                            1 => "1".bright_blue().into_styled(),
+                            2 => "2".green().into_styled(),
+                            3 => "3".red().into_styled(),
+                            4 => "4".blue().into_styled(),
+                            5 => "5".yellow().into_styled(),
+                            6 => "6".cyan().into_styled(),
+                            7 => "7".black().into_styled(),
+                            8 => "8".bright_black().into_styled(),
+                            _ => unreachable!("Invalid value of mines left"),
+                        };
+                        f.write_str(&string.to_string())?;
+                    }
+                    ShadowCell::ShadowOpen => f.write_str("+")?,
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 fn find_suitable_mine_disposition(
     pos: Position,
     game: &mut ShadowMinefield,
 ) -> Vec<Vec<(Position, bool)>> {
+    println!("{game}");
+
     let mines = game.get_remaining_mines(pos);
     println!("Remaining mines: {mines}");
     let closed_positions = game.get_closed_positions(pos);
@@ -277,7 +321,6 @@ fn find_invariant_mine(
 }
 
 fn try_find_mine_around(pos: Position, game: &MineField) -> Option<(Position, bool)> {
-    println!("{}", game);
     println!("Trying to find something for {pos}");
 
     let mut shadow_minefield = ShadowMinefield::new(game);
