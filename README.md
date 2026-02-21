@@ -4,6 +4,9 @@
 - [x] Random strategy
 - [x] Immediate deterministic strategy (when a cell has the same number of hidden neighbours as the number it shows, all those neighbours must be mines)
 - [ ] More advanced deterministic strategies
+  - [x] Reasoning on one cluster
+  - [ ] Mine counting
+  - [ ] Reasoning on multiple clusters
 - [ ] Probabilistic strategies when deterministic ones are not possible
 
 ![Minesweeper experiment](./example-game.png)
