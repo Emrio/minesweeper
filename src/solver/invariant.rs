@@ -3,7 +3,7 @@ use crate::{CellData, MineField, Position};
 #[derive(Debug)]
 enum ShadowCell {
     Closed,
-    Open(usize),
+    Open { mines: usize, mines_left: usize },
     ShadowOpen,
     Flagged,
     ShadowFlagged,
@@ -14,25 +14,40 @@ impl ShadowCell {
     //     self.get_mines_count().is_some()
     // }
 
-    // pub fn get_mines_count(&self) -> Option<usize> {
-    //     if let ShadowCell::Open(mines) = self {
-    //         Some(*mines)
-    //     } else {
-    //         None
-    //     }
-    // }
+    pub fn is_shadow_open(&self) -> bool {
+        match self {
+            ShadowCell::ShadowOpen => true,
+            _ => false,
+        }
+    }
+
+    pub fn get_mines_left(&self) -> Option<usize> {
+        match self {
+            ShadowCell::Open {
+                mines: _,
+                mines_left,
+            } => Some(*mines_left),
+            _ => None,
+        }
+    }
 
     pub fn is_closed(&self) -> bool {
-        if let ShadowCell::Closed = self {
-            true
-        } else {
-            false
+        match self {
+            ShadowCell::Closed => true,
+            _ => false,
         }
     }
 
     pub fn is_flagged(&self) -> bool {
         match self {
             ShadowCell::Flagged | ShadowCell::ShadowFlagged => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_shadow_flagged(&self) -> bool {
+        match self {
+            ShadowCell::ShadowFlagged => true,
             _ => false,
         }
     }
@@ -51,12 +66,25 @@ impl<'a> ShadowMinefield<'a> {
                 let pos = (x, y).into();
                 field.push(match game.cell_data(pos) {
                     CellData::Closed => ShadowCell::Closed,
-                    CellData::Open(mines) => ShadowCell::Open(mines),
+                    CellData::Open(mines) => ShadowCell::Open {
+                        mines,
+                        mines_left: mines - Self::mines_flagged(pos, game),
+                    },
                     CellData::Flagged => ShadowCell::Flagged,
                 });
             }
         }
         Self { game, field }
+    }
+
+    fn mines_flagged(pos: Position, game: &MineField) -> usize {
+        pos.neighbours(game)
+            .into_iter()
+            .filter_map(|neighbour| match game.cell_data(neighbour) {
+                CellData::Flagged => Some(()),
+                _ => None,
+            })
+            .count()
     }
 
     fn get_cell(&self, pos: Position) -> &ShadowCell {
@@ -88,32 +116,23 @@ impl<'a> ShadowMinefield<'a> {
     }
 
     pub fn flag(&mut self, pos: Position) -> bool {
-        match self.field.get(pos.to_index(self.game.width())) {
-            None => panic!("Invalid position"),
-            Some(ShadowCell::Open(_))
-            | Some(ShadowCell::ShadowOpen)
-            | Some(ShadowCell::ShadowFlagged)
-            | Some(ShadowCell::Flagged) => {
-                panic!("Position cannot be shadow flagged")
-            }
-            Some(ShadowCell::Closed) => {}
+        if !self.get_cell(pos).is_closed() {
+            panic!("Position cannot be shadow flagged")
         }
 
         for neighbour in pos.neighbours(self.game) {
-            match self.get_cell(neighbour) {
-                ShadowCell::Open(0) => return false,
-                _ => {}
+            if let Some(0) = self.get_cell(neighbour).get_mines_left() {
+                return false;
             }
         }
 
         for neighbour in pos.neighbours(self.game) {
-            let cell = self.get_cell_mut(neighbour);
-
-            match cell {
-                Some(ShadowCell::Open(n)) => {
-                    *n -= 1;
-                }
-                _ => {}
+            if let Some(ShadowCell::Open {
+                mines: _,
+                mines_left,
+            }) = self.get_cell_mut(neighbour)
+            {
+                *mines_left -= 1;
             }
         }
 
@@ -123,26 +142,18 @@ impl<'a> ShadowMinefield<'a> {
         true
     }
 
-    pub fn unflag(&mut self, pos: Position) {
-        match self.field.get(pos.to_index(self.game.width())) {
-            None => panic!("Invalid position"),
-            Some(ShadowCell::Open(_))
-            | Some(ShadowCell::ShadowOpen)
-            | Some(ShadowCell::Closed)
-            | Some(ShadowCell::Flagged) => {
-                panic!("Position cannot be shadow unflagged")
-            }
-            Some(ShadowCell::ShadowFlagged) => {}
+    fn unflag(&mut self, pos: Position) {
+        if !self.get_cell(pos).is_shadow_flagged() {
+            panic!("Position cannot be shadow unflagged")
         }
 
         for neighbour in pos.neighbours(self.game) {
-            let cell = self.get_cell_mut(neighbour);
-
-            match cell {
-                Some(ShadowCell::Open(n)) => {
-                    *n += 1;
-                }
-                _ => {}
+            if let Some(ShadowCell::Open {
+                mines: _,
+                mines_left,
+            }) = self.get_cell_mut(neighbour)
+            {
+                *mines_left += 1;
             }
         }
 
@@ -151,33 +162,19 @@ impl<'a> ShadowMinefield<'a> {
     }
 
     pub fn open(&mut self, pos: Position) -> bool {
-        match self.field.get(pos.to_index(self.game.width())) {
-            None => panic!("Invalid position"),
-            Some(ShadowCell::Open(_))
-            | Some(ShadowCell::ShadowOpen)
-            | Some(ShadowCell::ShadowFlagged)
-            | Some(ShadowCell::Flagged) => {
-                panic!("Position cannot be shadow opened")
-            }
-            Some(ShadowCell::Closed) => {}
+        if !self.get_cell(pos).is_closed() {
+            panic!("Position cannot be shadow opened")
         }
 
         for neighbour in pos.neighbours(self.game) {
-            println!(
-                "Making sure neighbour {neighbour} is fine... {:?}",
-                self.get_cell(neighbour)
-            );
-            match self.get_cell(neighbour) {
-                ShadowCell::Open(mines)
-                    if *mines > 0 && self.get_closed_positions(neighbour).len() < *mines =>
-                {
-                    println!(
-                        "Cell {neighbour} has {mines} mines left! It has {} closed positions in its vicinity",
-                        self.get_closed_positions(neighbour).len()
-                    );
-                    return false;
-                }
-                _ => {}
+            if let ShadowCell::Open {
+                mines: _,
+                mines_left,
+            } = self.get_cell(neighbour)
+                && *mines_left > 0
+                && self.get_closed_positions(neighbour).len() < *mines_left
+            {
+                return false;
             }
         }
 
@@ -187,16 +184,9 @@ impl<'a> ShadowMinefield<'a> {
         true
     }
 
-    pub fn unopen(&mut self, pos: Position) {
-        match self.field.get(pos.to_index(self.game.width())) {
-            None => panic!("Invalid position"),
-            Some(ShadowCell::Open(_))
-            | Some(ShadowCell::ShadowFlagged)
-            | Some(ShadowCell::Closed)
-            | Some(ShadowCell::Flagged) => {
-                panic!("Position cannot be shadow opened")
-            }
-            Some(ShadowCell::ShadowOpen) => {}
+    fn unopen(&mut self, pos: Position) {
+        if !self.get_cell(pos).is_shadow_open() {
+            panic!("Position cannot be shadow opened")
         }
 
         let cell = self.get_cell_mut(pos).unwrap();
